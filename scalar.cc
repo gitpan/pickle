@@ -258,7 +258,7 @@ namespace Pickle
     }
     return get_interpreter () .call_function
       ("Pickle::call_method",
-       List () << meth << *this << args .get_arrayref (), cx);
+       List () << meth << *this << (const Arrayref&) args, cx);
   }
 
 }

@@ -212,7 +212,7 @@ namespace Pickle
   Interpreter::call_function (const Scalar& func, const List& args,
 			      Context cx = SCALAR) const
   {
-    AV* av = (AV*) SvRV (args .get_arrayref() .imp);
+    AV* av = (AV*) SvRV (((const Arrayref&) args) .imp);
     return call_function (const_cast<SV*> (func .imp), 1 + AvFILL (av),
 			  AvARRAY (av), cx);
   }
@@ -356,7 +356,7 @@ namespace Pickle
       {
 	List arglist (args);
 	List retlist (((sub) CvXSUBANY (cv) .any_ptr) (arglist, cx));
-	retsv = SvREFCNT_inc (Perl_sv_2mortal (retlist .get_arrayref () .imp));
+	retsv = SvREFCNT_inc (Perl_sv_2mortal (((Arrayref&) retlist) .imp));
       }
     catch (Exception* e)
       {

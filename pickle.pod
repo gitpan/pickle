@@ -7,7 +7,7 @@ pickle - C++ access to the Perl interpreter
     #include <pickle.hh>
     using namespace Pickle;
 
-    Interpreter* interp = vivify ();
+    Interpreter::vivify ();
 
     eval_string ("use Cwd;");
     Scalar cwd = call_function ("cwd");
@@ -16,7 +16,7 @@ pickle - C++ access to the Perl interpreter
     eval_string ("use File::Glob ':glob';");
     List args = List () << "~/*.doc"
                         << call_function ("GLOB_TILDE");
-    List files = call_function ("glob", args, LIST);
+    Arrayref files = call_function ("glob", args, LIST);
     for (size_t i = 0; i < files.size(); i++)
         cout << string(files[i]) << endl;
 
@@ -41,11 +41,11 @@ assumes knowledge of Perl and C++.
 Unless otherwise specified, the functions and data types here are
 declared in C<E<lt>pickle.hhE<gt>> in namespace
 I<Pickle> and defined in I<-lpickle>.  To use them in a C++
-program, you must link with the Perl interpreter, I<-libperlint>.
+program, you must link with the Perl interpreter, I<-lperlint>.
 
 =head2 Scalars
 
-Pickle uses class Scalar to hold Perl scalar values:
+Pickle uses class I<Scalar> to hold Perl scalar values:
 
     class Scalar;
 
@@ -72,10 +72,10 @@ structures as described in L<perlobj/"Two-Phased Garbage Collection">.
 
 =head2 Arrayrefs and Hashrefs
 
-Scalars can hold array and hash references.  Pickle defines a
-subclass of Scalar for arrayrefs and another for hashrefs.  Their
-default constructors produce empty containers, the same as the Perl
-expressions C<[]> and C<{}>:
+Scalars can hold array and hash references.  Pickle defines subclasses
+of Scalar named I<Arrayref> and I<Hashref> for the two reference
+types.  Their default constructors produce empty containers, the same
+as the Perl expressions C<[]> and C<{}>:
 
     Arrayref a;            // 0-element anonymous array
     Hashref h;             // empty hash table
@@ -127,14 +127,14 @@ list.  Void context returns C<undef>.
 Perl subs can be called with any number of arguments.  (Not if they
 are prototyped, but Pickle does not honor Perl prototypes.)
 Passing variable-length argument lists in C++ is awkward, so
-Pickle defines a class, List, for holding argument lists.
+Pickle defines a class, I<List>, for holding argument lists.
 
 A List object is very much like an arrayref.  In fact, it contains an
-Arrayref object which you can access through its I<get_arrayref>
-method.  Lists and arrayrefs are defined as different types to make
-certain overloaded functions work and to emphasize their different
-uses.  Perl also distinguishes between lists and arrays, though they
-are both just sequences of scalars.
+Arrayref and conversion operators for types C<Arrayref &> and C<const
+Arrayref &>.  Lists and arrayrefs are defined as different types to
+make certain overloaded functions work and to emphasize their
+different uses.  Perl also distinguishes between lists and arrays,
+though they are both just sequences of scalars.
 
 The default list constructor creates an empty list.  The C<E<lt>E<lt>>
 (left bitshift) operator is overloaded for the List type similarly to
@@ -157,11 +157,11 @@ be specified as the final argument.  If present, it must be either
 I<SCALAR>, I<LIST>, or I<VOID>.  The default context is scalar.
 
 As an example, this code calls the function I<Carp::confess> with
-arguments C<"oops!"> and C<"I'm sorry">:
+argument C<"I'm sorry">:
 
-    call_function ("Carp::confess", List () << "oops!" << "I'm sorry");
+    call_function ("Carp::confess", List () << "I'm sorry");
 
-I<call_function> only works with user-defined subs, not Perl's builtin
+I<call_function> works only with user-defined subs, not Perl's builtin
 operators such as I<print>.
 
 =head2 Methods
@@ -170,10 +170,10 @@ If a Scalar variable holds a package name or blessed reference, you
 can call methods on it using the C++ I<call_method> method.  Like
 I<call_function>, it takes an optional List of the arguments and an
 optional context specifier.  For example, this code calls the Perl
-method C<"fetchrow"> on the scalar object C<sth> with no arguments in
+method I<fetchrow_array> on the object C<sth> with no arguments in
 list context:
 
-    Arrayref result = sth .call_method ("fetchrow", LIST);
+    Arrayref result = sth .call_method ("fetchrow_array", LIST);
 
 
 =head2 Evaluating Perl Code
@@ -238,8 +238,8 @@ Example:
     }
     catch (Exception* e)
     {
-	cerr << "Perl error: " << e->what () << endl;
-	delete e;
+        cerr << "Perl error: " << e->what () << endl;
+        delete e;
     }
 
 Callbacks can construct an Exception object with a Scalar argument and
@@ -256,24 +256,18 @@ Example:
         return sqrt (double (s));
     }
 
-=head2 Setup
+=head2 Perl in a C++ Program
 
 There are two ways to link Perl and C++ code together.  Either a Perl
 program can load a module implemented in C++, or a C++ program can
 embed the Perl interpreter.  Here, "interpreter" means something akin
-to "virtual machine" in Java parlance. It is the C++ object that
-implements the environment in which Perl programs execute.
+to "virtual machine" in Java parlance.  The interpreter is the C++
+object that implements the environment in which Perl programs execute.
 
-L<perlxstut> describes how to implement Perl functions in C and C++.
-C++ code in a Perl module can use Pickle simply by linking with
-I<-lpickle> as described in L<ExtUtils::MakeMaker>.
-
-To use Pickle in a C++ program, you must also link with the Perl
-interpreter, either as described in L<perlembed> or using the
-I<-lperlint> library, if available.  You may use the functions
-described in perlembed to initialize the interpreter, or you may use
-Pickle's simpler interface.  Just allocate an object of class
-I<Interpreter>, like this:
+To use Pickle in a C++ program, you must link with I<-lpickle
+-lperlint>.  You may use the functions described in L<perlembed> to
+initialize the interpreter, or you may use Pickle's simpler interface.
+Just allocate an object of class I<Interpreter>, like this:
 
     Interpreter* interp = new Interpreter;
 
@@ -285,7 +279,7 @@ checks and warnings:
     char* argv[] = { "perl", "-Tw" "-e0" };
     interp = new Interpreter (sizeof argv / sizeof argv[0], argv);
 
-Note that "-e0" prevents the interpreter from trying to read a script
+Note that B<-e0> prevents the interpreter from trying to read a script
 from the standard input.
 
 The default Perl configuration will not tolerate more than one
@@ -296,14 +290,14 @@ free its memory by deallocating it, as in:
 
     delete interp;
 
-This will cause problems with any C++ Perl data held in C++ variables,
+This will cause problems with any Perl data held in C++ variables,
 because the destructor will try to interact with the nonexistent
 interpreter.
 
-You can check to see if an interpreter is running using
-I<Interpreter::ping()>.  If this function returns true, Perl objects
-may be created and manipulated.  This is useful in code that does not
-know whether it is running under Perl or C++.
+You can check to see if an interpreter has been initialized in the
+current process using I<Interpreter::ping()>.  If this function
+returns true, Perl objects may be created and manipulated.  This is
+useful in code meant to run under either Perl or C++.
 
 As a convenience, I<Interpreter::vivify()> is defined to construct and
 return a new interpreter unless one already exists, like this:
@@ -312,6 +306,79 @@ return a new interpreter unless one already exists, like this:
     {
       return Interpreter::ping () ? 0 : new Interpreter;
     }
+
+=head2 C++ in a Perl Program
+
+L<perlxs> and L<ExtUtils::MakeMaker> describe Perl's officially
+supported way to link C and C++ code into a Perl module.  Pickle is
+implemented using the interface described in L<perlapi>, but does not
+currently support interoperation with that interface.  (It would be
+nice if it did, but if you know Perl's API, you are qualified to hack
+on Pickle and get around this limitation.)  However, with the
+combination of I<define_sub> and XS's C<BOOT> keyword, the Perl API
+often isn't needed.
+
+Here is an example XS file that defines a sub named I<Foo::squarit>:
+
+    // Foo.xs
+    #include <pickle.hh>
+    using namespace Pickle;
+
+    static Scalar
+    squarit (Scalar& it)
+    {
+        return double(it) * double(it);
+    }
+
+    static void
+    init ()
+    {
+        define_sub ("Foo", "squarit", squarit);
+    }
+
+    // Always include these three here.
+    #include <EXTERN.h>
+    #include <perl.h>
+    #include <XSUB.h>
+
+    // Change Foo to your module's name
+    MODULE = Foo        PACKAGE = Foo
+
+    BOOT:
+            init();
+
+Here is a Makefile.PL to build the module:
+
+    # Makefile.PL
+    # Usage: perl Makefile.PL && make
+    use ExtUtils::MakeMaker;
+
+    WriteMakefile
+        (
+         'NAME'       => 'Foo',
+         'VERSION'    => '0.0',
+         'XSOPT'      => '-C++',
+         'CC'         => 'g++',
+         'LD'         => 'g++',
+         'LIBS'       => '-lpickle',
+         'dynamic_lib' => { 'OTHERLDFLAGS' =>
+                            '-Wl,-R,$(PREFIX)/lib -L$(PREFIX)/lib',
+                          },
+        );
+
+And you'll need Foo.pm to load it:
+
+    # Foo.pm
+    # Usage: perl -Mblib -MFoo -le "print Foo::squarit(253)"
+    package Foo;
+
+    use XSLoader;
+    XSLoader::load ('Foo');
+
+    1;
+
+Refer to L<perlmod>, L<ExtUtils::MakeMaker>, L<perlmodinstall> for
+general information about writing and installing modules.
 
 
 =head1 LICENSE
@@ -336,6 +403,7 @@ jtobey@john-edwin-tobey.org.  All rights reserved.
 
 =head1 SEE ALSO
 
-L<perlxstut>, L<ExtUtils::MakeMaker>, L<perlembed>.
+L<XSLoader>, L<perlmod>, L<ExtUtils::MakeMaker>, L<perlembed>,
+L<perlxs>
 
 =cut

@@ -46,7 +46,7 @@ Here, for CPAN tourists, is the synopsis from pickle.pod:
     #include <pickle.hh>
     using namespace Pickle;
 
-    Interpreter* interp = vivify ();
+    Interpreter::vivify ();
 
     eval_string ("use Cwd;");
     Scalar cwd = call_function ("cwd");
@@ -55,7 +55,7 @@ Here, for CPAN tourists, is the synopsis from pickle.pod:
     eval_string ("use File::Glob ':glob';");
     List args = List () << "~/*.doc"
                         << call_function ("GLOB_TILDE");
-    List files = call_function ("glob", args, LIST);
+    Arrayref files = call_function ("glob", args, LIST);
     for (size_t i = 0; i < files.size(); i++)
         cout << string(files[i]) << endl;
 

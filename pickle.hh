@@ -316,7 +316,8 @@ namespace Pickle
     size_t size () const { return arrayref .size (); }
     List& add (const Scalar& s) { arrayref .push (s); return *this; }
     List& operator<< (const Scalar& s) { return add (s); }
-    const Arrayref& get_arrayref () const { return arrayref; }
+    operator const Arrayref& () const { return arrayref; }
+    operator Arrayref& () { return arrayref; }
 
     const Scalar& at (size_t index) const { return arrayref [index]; }
     Scalar& at (size_t index) { return arrayref [index]; }
@@ -382,9 +383,6 @@ namespace Pickle
   {
     return call_method (meth, List (), cx);
   }
-
-  inline
-  Arrayref::Arrayref (const List& l) : Scalar (l .get_arrayref ()) {}
 
   inline void
   die (const Scalar& err)

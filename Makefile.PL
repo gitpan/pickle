@@ -23,7 +23,9 @@ use ExtUtils::MakeMaker;
 
 WriteMakefile (
 	       'NAME' => 'pickle',
-	       'VERSION' => '0.3',
+	       'VERSION' => '0.4',
+	       'CC' => 'g++',
+	       'LD' => 'g++',
 	      );
 
 package MY;
