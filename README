@@ -1,0 +1,94 @@
+Last modified: 27 Jun 2000
+
+This is Pickle, a C++ library for conveniently calling Perl functions
+and examining Perl data.  The interface is documented in the file
+pickle.pod.  It is known to work with Perl v5.6.0 on Linux.  It
+probably will require changes to work with non-default Perl
+configurations such as multiplicity or thread support.
+
+Features include:
+
+    * automatic memory management using Perl's reference counts
+
+    * two-way exception handling, Perl->C++ and C++->Perl
+
+    * support for making C++ functions callable from Perl
+
+    * read/write access to array and hash elements
+
+    * scalar conversion operators for several C++ builtin types.
+
+This is ALPHA software.  It is incomplete and very likely to contain
+bugs.
+
+To build this software, you need the Perl build environment and a C++
+compiler.  If you used an ordinary C compiler to compile Perl, specify
+the C++ compiler as CC and (if necessary) LD, like this:
+
+    perl Makefile.PL CC=g++ LD=g++
+
+"make install" puts pickle.hh into $(PREFIX)/include and the following
+files and symlinks into $(PREFIX)/lib:
+
+    libperlint.so -> libperlint.so.1
+    libpickle.so -> libpickle.so.1
+
+libperlint.so contains a copy of the Perl interpreter.  You may have
+to build Perl with special compiler flags to allow it to be made into
+a shared library.  You need -lperlint when linking Pickle with a C++
+program but not when linking XS modules (perldoc perlxs).
+libpickle.so is the Pickle library.  -lpickle is always required when
+using Pickle.  You have to make arrangements for the libraries to be
+found at run time.
+
+Here, for CPAN tourists, is the synopsis from pickle.pod:
+
+    #include <pickle.hh>
+    using namespace Pickle;
+
+    Interpreter* interp = vivify ();
+
+    eval_string ("use Cwd;");
+    Scalar cwd = call_function ("cwd");
+    cout << "cwd is " << string (cwd) << endl;
+
+    eval_string ("use File::Glob ':glob';");
+    List args = List () << "~/*.doc"
+                        << call_function ("GLOB_TILDE");
+    List files = call_function ("glob", args, LIST);
+    for (size_t i = 0; i < files.size(); i++)
+        cout << string(files[i]) << endl;
+
+    Scalar doit (Scalar& n)
+    {
+        return double (n) * double (n);
+    }
+    define_sub ("main", "square", doit);
+    cout << int (eval_string ("square(42)")) << endl;
+
+    try { call_some_perl() }
+    catch (Exception* e) { cerr << e->what(); delete e; }
+    throw new Exception ("Your fault");
+
+
+Copyright (C) 2000 John Tobey
+jtobey@john-edwin-tobey.org  All rights reserved.
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; see the file COPYING.  If not, write to the
+   Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+   MA 02111-1307  USA
+
+If included in the official Perl distribution by Larry Wall or his
+agent ("Pumpking"), it may be distributed under the same terms as the
+official Perl distribution.

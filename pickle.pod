@@ -1,0 +1,341 @@
+=head1 NAME
+
+pickle - C++ access to the Perl interpreter
+
+=head1 SYNOPSIS
+
+    #include <pickle.hh>
+    using namespace Pickle;
+
+    Interpreter* interp = vivify ();
+
+    eval_string ("use Cwd;");
+    Scalar cwd = call_function ("cwd");
+    cout << "cwd is " << string (cwd) << endl;
+
+    eval_string ("use File::Glob ':glob';");
+    List args = List () << "~/*.doc"
+                        << call_function ("GLOB_TILDE");
+    List files = call_function ("glob", args, LIST);
+    for (size_t i = 0; i < files.size(); i++)
+        cout << string(files[i]) << endl;
+
+    Scalar doit (Scalar& n)
+    {
+        return double (n) * double (n);
+    }
+    define_sub ("main", "square", doit);
+    cout << int (eval_string ("square(42)")) << endl;
+
+    try { call_some_perl() }
+    catch (Exception* e) { cerr << e->what(); delete e; }
+    throw new Exception ("Your fault");
+
+=head1 DESCRIPTION
+
+Pickle is a C++ interface to the Perl interpreter.  C++ programs
+that link with it can evaluate Perl code, create and examine Perl data
+structures, and make C++ functions accessible to Perl.  This document
+assumes knowledge of Perl and C++.
+
+Unless otherwise specified, the functions and data types here are
+declared in C<E<lt>pickle.hhE<gt>> in namespace
+I<Pickle> and defined in I<-lpickle>.  To use them in a C++
+program, you must link with the Perl interpreter, I<-libperlint>.
+
+=head2 Scalars
+
+Pickle uses class Scalar to hold Perl scalar values:
+
+    class Scalar;
+
+The default Scalar constructor creates an "C<undef>" value.  You can
+initialize scalars with various C++ types including bool, int,
+unsigned int, long, unsigned long, double, and string.
+
+    Scalar s0;             // undef
+    Scalar s1 (0);         // integer
+    Scalar s2 (3.14);      // double
+    Scalar s3 ("hello");   // string
+
+Class Scalar defines conversion operators for the same C++ types, so
+you can use Scalar objects where these types are expected:
+
+    Scalar s;
+    int i (s);
+    string str (s);
+    x = r * cos(s);
+
+As in Perl, scalars are automatically reference counted, so memory
+management is not much of an issue, unless you create cyclic
+structures as described in L<perlobj/"Two-Phased Garbage Collection">.
+
+=head2 Arrayrefs and Hashrefs
+
+Scalars can hold array and hash references.  Pickle defines a
+subclass of Scalar for arrayrefs and another for hashrefs.  Their
+default constructors produce empty containers, the same as the Perl
+expressions C<[]> and C<{}>:
+
+    Arrayref a;            // 0-element anonymous array
+    Hashref h;             // empty hash table
+
+Arrayref and Hashref can also be constructed from scalars.  This does
+B<not> perform type verification, however.  As in Perl, you will get a
+runtime exception if you make a wrong assumption about a reference
+type.
+
+    Arrayref a;
+    Scalar some_func();
+    a = some_func();       // okay if an arrayref was returned.
+    a = Scalar (5);        // may lead to runtime errors!
+
+The Arrayref and Hashref classes both define methods I<fetch> and
+I<store> for retrieving and inserting elements.  Additionally,
+Arrayref overloads the C<[]> operator, so you can use C++ array syntax
+to fetch arrayref elements.  However, unlike I<fetch>, C<[]> extends
+the array if the given index is past the end.
+
+    Arrayref a;
+    a .push (17);          // a[0] == 17
+    a[1] = a[5];           // a now has 6 elements!
+    a .store (10, a .fetch (20));
+                           // a.size() == 11
+
+Arrayref's I<push> method pushes a scalar onto the end of the array.
+I<size> returns the array length.
+
+    Hashref h;
+    h .store ("array", a);
+    a = h .fetch ("other");
+
+There is currently no easy way to iterate over a Hashref.
+
+=head2 Lists and Functions
+
+Every Perl function takes a list of scalar arguments and returns a
+list of scalar results.  In scalar context, the return list is forced
+to contain exactly one item, while in void context the result list is
+discarded.
+
+Pickle's I<call_function> lets you call functions in any context
+- list, scalar, or void.  Because C++ does not have Perl's notion of
+context, I<call_function> must always return a Scalar.  By convention,
+list context returns an Arrayref object whose elements are the result
+list.  Void context returns C<undef>.
+
+Perl subs can be called with any number of arguments.  (Not if they
+are prototyped, but Pickle does not honor Perl prototypes.)
+Passing variable-length argument lists in C++ is awkward, so
+Pickle defines a class, List, for holding argument lists.
+
+A List object is very much like an arrayref.  In fact, it contains an
+Arrayref object which you can access through its I<get_arrayref>
+method.  Lists and arrayrefs are defined as different types to make
+certain overloaded functions work and to emphasize their different
+uses.  Perl also distinguishes between lists and arrays, though they
+are both just sequences of scalars.
+
+The default list constructor creates an empty list.  The C<E<lt>E<lt>>
+(left bitshift) operator is overloaded for the List type similarly to
+the standard I<ostream> class.  This operator takes a scalar on the
+right, appends it to the list, and returns the list, allowing chains
+like this:
+
+    List l = List () << Scalar(3) << Scalar("caballeros");
+
+Taking advantage of C++ type conversion and overloading rules, you
+could rewrite this as:
+
+    List l = List () << 3 << "caballeros";
+
+I<call_function> requires as its first argument a Scalar, which can be
+the name of a function or an anonymous coderef.  Then comes an
+optional List argument containing the function args.  If no list is
+given, the sub is called without arguments.  The calling context may
+be specified as the final argument.  If present, it must be either
+I<SCALAR>, I<LIST>, or I<VOID>.  The default context is scalar.
+
+As an example, this code calls the function I<Carp::confess> with
+arguments C<"oops!"> and C<"I'm sorry">:
+
+    call_function ("Carp::confess", List () << "oops!" << "I'm sorry");
+
+I<call_function> only works with user-defined subs, not Perl's builtin
+operators such as I<print>.
+
+=head2 Methods
+
+If a Scalar variable holds a package name or blessed reference, you
+can call methods on it using the C++ I<call_method> method.  Like
+I<call_function>, it takes an optional List of the arguments and an
+optional context specifier.  For example, this code calls the Perl
+method C<"fetchrow"> on the scalar object C<sth> with no arguments in
+list context:
+
+    Arrayref result = sth .call_method ("fetchrow", LIST);
+
+
+=head2 Evaluating Perl Code
+
+In addition to calling existing functions, Pickle allows you to
+evaluate strings of Perl code using the I<eval_string> function:
+
+    Scalar result = eval_string ("$x + 4 * $z");
+
+I<eval_string> supports only scalar context.
+
+=head2 Defining Functions
+
+Pickle supports creating Perl subs that call C++ functions
+(callbacks).  Your C++ function may have any of three prototypes.  The
+first form requires exactly one scalar argument and returns a scalar.
+
+    Scalar one_arg (Scalar& arg);
+
+The following form takes an object followed by a list of name/value
+pairs, which Pickle loads into a hash.  It is designed for
+methods that support the C<$obj-E<gt>meth (name =E<gt> value, ...)>
+calling convention.
+
+    Scalar arg_hash (Scalar& arg, Hashref& args);
+
+The third form is the most general.  It takes a list of arguments and
+a context specifier and returns a list of results.
+
+    List arg_list (List& args, Context context);
+
+Here I<context> will be either I<LIST>, I<SCALAR>, or I<VOID>.
+
+To make a function callable from Perl, use the I<define_sub> function.
+I<define_sub> takes as arguments a package name, a sub name, and a
+pointer to the C++ callback function.  This example creates a sub
+named I<doit> in package I<main>, calls it with C<17> as the argument,
+and displays the result as an integer:
+
+    static Scalar
+    my_func (Scalar& x)
+    {
+        return int (x) * int (x);
+    }
+
+    // ...elsewhere...
+    define_sub ("main", "doit", my_func);
+    cout << int (eval_string ("main::doit (17)")) << endl;
+
+=head2 Using Exceptions
+
+When Perl code under the control of C++ "dies", Pickle throws an
+exception of type I<Exception*>.  The error message can be obtained by
+calling its I<what> method.  The exception must be freed with
+I<delete>.
+
+Example:
+
+    try
+    {
+        eval_string ("$x = 0; 4 / $x");
+    }
+    catch (Exception* e)
+    {
+	cerr << "Perl error: " << e->what () << endl;
+	delete e;
+    }
+
+Callbacks can construct an Exception object with a Scalar argument and
+throw a pointer to it.  Pickle deletes the object.  Perl can trap
+such exceptions using I<eval>.
+
+Example:
+
+    Scalar my_callback (Scalar& s)
+    {
+        if (double (s) < 0)
+            throw new Exception (string ("'") .append (s)
+                                 .append ("' is a negative number"));
+        return sqrt (double (s));
+    }
+
+=head2 Setup
+
+There are two ways to link Perl and C++ code together.  Either a Perl
+program can load a module implemented in C++, or a C++ program can
+embed the Perl interpreter.  Here, "interpreter" means something akin
+to "virtual machine" in Java parlance. It is the C++ object that
+implements the environment in which Perl programs execute.
+
+L<perlxstut> describes how to implement Perl functions in C and C++.
+C++ code in a Perl module can use Pickle simply by linking with
+I<-lpickle> as described in L<ExtUtils::MakeMaker>.
+
+To use Pickle in a C++ program, you must also link with the Perl
+interpreter, either as described in L<perlembed> or using the
+I<-lperlint> library, if available.  You may use the functions
+described in perlembed to initialize the interpreter, or you may use
+Pickle's simpler interface.  Just allocate an object of class
+I<Interpreter>, like this:
+
+    Interpreter* interp = new Interpreter;
+
+There is a constructor that accepts command line arguments and an
+optional environment pointer like the C++ function I<main>.  This can
+be used to pass flags to Perl.  For example, this turns on taint
+checks and warnings:
+
+    char* argv[] = { "perl", "-Tw" "-e0" };
+    interp = new Interpreter (sizeof argv / sizeof argv[0], argv);
+
+Note that "-e0" prevents the interpreter from trying to read a script
+from the standard input.
+
+The default Perl configuration will not tolerate more than one
+interpreter at a time in the same process.  Most Pickle functions
+act implicitly on the "current" interpreter.  So the Interpreter
+object is generally not used.  You can cause Perl to shut down and
+free its memory by deallocating it, as in:
+
+    delete interp;
+
+This will cause problems with any C++ Perl data held in C++ variables,
+because the destructor will try to interact with the nonexistent
+interpreter.
+
+You can check to see if an interpreter is running using
+I<Interpreter::ping()>.  If this function returns true, Perl objects
+may be created and manipulated.  This is useful in code that does not
+know whether it is running under Perl or C++.
+
+As a convenience, I<Interpreter::vivify()> is defined to construct and
+return a new interpreter unless one already exists, like this:
+
+    Interpreter* Interpreter::vivify ()
+    {
+      return Interpreter::ping () ? 0 : new Interpreter;
+    }
+
+
+=head1 LICENSE
+
+Copyright (C) 2000 by John Tobey,
+jtobey@john-edwin-tobey.org.  All rights reserved.
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; see the file COPYING.  If not, write to the
+   Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+   MA 02111-1307  USA
+
+=head1 SEE ALSO
+
+L<perlxstut>, L<ExtUtils::MakeMaker>, L<perlembed>.
+
+=cut

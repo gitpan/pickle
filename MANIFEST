@@ -1,0 +1,16 @@
+COPYING
+ChangeLog
+MANIFEST
+MANIFEST.SKIP
+Makefile.PL
+README
+arrayref.cc
+coderef.cc
+hashref.cc
+interpreter.cc
+pickle.hh
+pickle.pod
+pickle_int.hh
+scalar.cc
+scalarref.cc
+test_pickle.cc

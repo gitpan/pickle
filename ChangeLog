@@ -1,0 +1,9 @@
+2000-06-27  John Tobey  <jtobey@john-edwin-tobey.org>
+
+	* Release 0.3.  What happened to 0.2?  Well, the major changes are
+	the renaming of the library, easier configuration, and the removal
+	of some experimental interfaces.  Minutiae are in CVS log entries.
+
+2000-03-28  John Tobey  <jtobey@john-edwin-tobey.org>
+
+	* Release 0.1.
