@@ -170,7 +170,6 @@ namespace Pickle
   {
   private:
     Scalar_imp* imp;  // imp is an SV pointer, no more, no less.
-    Scalar (Scalar_imp* i) : imp (i) {}
 
     // Kludge to let Arrayref::at et al. return Scalar&.
     static Scalar& ref (Scalar_imp*& ptr)
@@ -190,6 +189,9 @@ namespace Pickle
     friend istream& operator >> (istream& os, Scalar& o);
 
   public:
+    Scalar (Scalar_imp* i) : imp (i) {}
+    Scalar_imp* get_imp () const { return imp; }
+
     // Manage reference counts.
     ~Scalar ();
     Scalar (const Scalar&);
@@ -324,6 +326,9 @@ namespace Pickle
     // Do the equivalent of `$this->$meth'.  `const' is a lie.
     inline Scalar call_method (const string& meth,
 			       Context cx = SCALAR) const;
+
+    // THIS must point to a reference.  Bless it into package PKGNAME.
+    void bless (const Scalar& pkgname);
 
   };
   // Use XML::Dumper if available, else Data::Dumper.

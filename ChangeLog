@@ -1,3 +1,14 @@
+2000-10-30  John Tobey  <jtobey@john-edwin-tobey.org>
+
+	* (0.5 branch): Release 0.5.1.
+
+	* (0.5 branch): Support Perl 5.005.
+
+	* (0.5 branch) pickle.hh, scalar.cc: Scalar::bless - new method
+
+	* (0.5 branch) scalarref.cc: Added Scalarref default constructor.
+	Fixed a refcount bug in fetch().
+
 2000-07-23  John Tobey  <jtobey@john-edwin-tobey.org>
 
 	* Release 0.5.  Substantial portions rewritten.  Threaded Perl and

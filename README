@@ -1,4 +1,4 @@
-Last modified: 23 Jul 2000
+Last modified: 30 Oct 2000
 
 This is Pickle, a C++ library for conveniently calling Perl functions
 and examining Perl data.  It provides a higher-level interface than
@@ -13,9 +13,11 @@ perlcall'.
 
 The library is documented in the file pickle.pod and should be
 browsable via `perldoc pickle' after installation.  Newer versions
-will be at http://search.cpan.org/search?dist=pickle .  Pickle is
-known to work with Perl v5.6.0 on Linux and Solaris (GNU CC) using
-both default and ithreads (-Dusethreads) configurations.
+will be at http://search.cpan.org/search?dist=pickle and in CVS branch
+`pickle-0_5-maint' at http://sourceforge.net/cvs/?group_id=9183.
+Pickle has been known to work with Perl v5.6.0, 5.005_03, Linux, and
+Solaris (GNU CC), using both default and ithreads (-Dusethreads)
+configurations.
 
 This library will *NOT* work with Perl 5.005x and earlier.
 
@@ -113,7 +115,7 @@ jtobey@john-edwin-tobey.org  All rights reserved.
    Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
    MA 02111-1307  USA
 
-If included in the official Perl distribution by Larry Wall or his
-agent (`Pumpking'), it may be distributed under the same terms as the
-official Perl distribution.  For other licensing arrangements, contact
-the author.
+If included in the official Perl distribution at
+http://www.perl.com/CPAN/src/, this software may be distributed under
+the same terms as said official Perl distribution.  For other
+licensing arrangements, contact the author.

@@ -19,15 +19,7 @@
 */
 
 
-#include <strstream>
 #include <XSUB.h>
-
-
-#if 0
-#ifdef PERL_IMPLICIT_CONTEXT
-#  error "PERL_IMPLICIT_CONTEXT is not fully supported."
-#endif
-#endif
 
 #define PICKLE_INTERPRETER_PRIVATE				\
     Interpreter (Interpreter_imp* i) : interpreter_imp (i) {}	\
@@ -36,13 +28,13 @@
     Scalar_imp* call_function (Scalar_imp* func, int argc,	\
 			       Scalar_imp** argv,		\
 			       Context ctx) const;		\
-    static void propagate_to_perl (pTHX_ Exception* e);		\
-    static XS (xs_entry_one_arg);				\
-    static XS (xs_entry_hashref);				\
-    static XS (xs_entry_list);
+    friend void xs_entry_one_arg (pTHX_ CV* cv);		\
+    friend void xs_entry_hashref (pTHX_ CV* cv);		\
+    friend void xs_entry_list (pTHX_ CV* cv);
 
 
 #include "pickle_int.hh"
+#include <strstream>
 
 #if REFCNT_DEBUG
 SV* my_sv_refcnt_inc (SV* sv) { return my_inline_sv_refcnt_inc (sv); }
@@ -61,11 +53,11 @@ namespace Pickle
     return Scalar ();
   }
 
-  extern "C" { void xs_init (pTHXo); }
+  extern "C" { void xs_init (pTHX); }
   static void
-  my_xs_init (pTHXo)
+  my_xs_init (pTHX)
   {
-    xs_init (aTHXo);
+    xs_init (aTHX);
 
     // Install a warning handler to prevent the default warning behavior,
     // which prints to stderr, conflicting with iostream use.
@@ -198,19 +190,19 @@ namespace Pickle
   Pickle::Scalar
   Interpreter::Scalar (const string& s) const
   {
-    return newSVpvn (s .data (), s .size ());
+    return newSVpvn (const_cast<char*> (s .data ()), s .size ());
   }
 
   Pickle::Scalar
   Interpreter::Scalar (const char* s) const
   {
-    return newSVpv (s, 0);
+    return newSVpv (const_cast<char*> (s), 0);
   }
 
   Pickle::Scalar
   Interpreter::Scalar (const char* s, unsigned long len) const
   {
-    return newSVpvn (s, len);
+    return newSVpvn (const_cast<char*> (s), len);
   }
 
   Pickle::Scalar Interpreter::Scalar (double d) const
@@ -238,19 +230,31 @@ namespace Pickle
   Pickle::Scalarref Interpreter::Scalarref (const string& name)
   { return Scalarref (name .c_str ()); }  // XXX embedded \0
   Pickle::Scalarref Interpreter::Scalarref (const char* name)
-  { return Pickle::Scalarref (newRV (get_sv (name, 1)), false); }
+  {
+    return Pickle::Scalarref
+      (newRV (get_sv (const_cast<char*> (name), 1)), false);
+  }
   Pickle::Arrayref Interpreter::Arrayref (const string& name)
   { return Arrayref (name .c_str ()); }  // XXX embedded \0
   Pickle::Arrayref Interpreter::Arrayref (const char* name)
-  { return Pickle::Arrayref (newRV ((SV*) get_av (name, 1)), false); }
+  {
+    return Pickle::Arrayref
+      (newRV ((SV*) get_av (const_cast<char*> (name), 1)), false);
+  }
   Pickle::Hashref Interpreter::Hashref (const string& name)
   { return Hashref (name .c_str ()); }  // XXX embedded \0
   Pickle::Hashref Interpreter::Hashref (const char* name)
-  { return Pickle::Hashref (newRV ((SV*) get_hv (name, 1)), false); }
+  {
+    return Pickle::Hashref
+      (newRV ((SV*) get_hv (const_cast<char*> (name), 1)), false);
+  }
   Pickle::Coderef Interpreter::Coderef (const string& name)
   { return Coderef (name .c_str ()); }  // XXX embedded \0
   Pickle::Coderef Interpreter::Coderef (const char* name)
-  { return Pickle::Coderef (newRV ((SV*) get_cv (name, 1)), false); }
+  {
+    return Pickle::Coderef
+      (newRV ((SV*) get_cv (const_cast<char*> (name), 1)), false);
+  }
 
   // Compilation.
 
@@ -272,7 +276,7 @@ namespace Pickle
     // This is equivalent to `local($@)'.  XXX missing from perlapi.pod
     save_scalar (PL_errgv);
 
-    retsv = eval_pv (proggie.c_str(), G_SCALAR);
+    retsv = eval_pv (const_cast<char*> (proggie.c_str()), G_SCALAR);
 
     // I wasted half a day figuring out that this is needed.
     POPMARK;
@@ -365,16 +369,17 @@ namespace Pickle
 
   // Tranfering control from Perl to C++.
 
-  void
-  Interpreter::propagate_to_perl (pTHX_ Exception* e)
+  static void
+  propagate_to_perl (pTHX_ Exception* e)
   {
     // XXX This is not especially clever.
-    sv_setsv (ERRSV, e->get_scalar () .imp);
+    sv_setsv (ERRSV, e->get_scalar () .get_imp ());
     delete e;
     croak ("%_", ERRSV);
   }
 
-  XS (Interpreter::xs_entry_one_arg)
+  void
+  xs_entry_one_arg (pTHX_ CV* cv)
   {
     dXSARGS;
     if (items != 1)
@@ -392,7 +397,7 @@ namespace Pickle
 	   with another.  A clever compiler might optimize away SvREFCNT_inc.
 	   (nah...)
 	*/
-	ST (0) = SvREFCNT_inc (sv_2mortal (ret .imp));
+	ST (0) = SvREFCNT_inc (sv_2mortal (ret .get_imp ()));
       }
     catch (Exception* e)
       {
@@ -401,7 +406,8 @@ namespace Pickle
     XSRETURN (1);
   }
 
-  XS (Interpreter::xs_entry_hashref)
+  void
+  xs_entry_hashref (pTHX_ CV* cv)
   {
     dXSARGS;
     if ((items % 2) == 0)
@@ -417,7 +423,7 @@ namespace Pickle
 	Pickle::Hashref arg (newRV_noinc ((SV*) args), false);
 	Pickle::Scalar ret (((sub_hashref) CvXSUBANY (cv) .any_ptr)
 			    (obj, arg));
-	ST (0) = SvREFCNT_inc (sv_2mortal (ret .imp));
+	ST (0) = SvREFCNT_inc (sv_2mortal (ret .get_imp ()));
       }
     catch (Exception* e)
       {
@@ -426,7 +432,8 @@ namespace Pickle
     XSRETURN (1);
   }
 
-  XS (Interpreter::xs_entry_list)
+  void
+  xs_entry_list (pTHX_ CV* cv)
   {
     dXSARGS;
     Context cx;
@@ -445,7 +452,8 @@ namespace Pickle
       {
 	Pickle::List arglist (args);
 	Pickle::List retlist (((sub) CvXSUBANY (cv) .any_ptr) (arglist, cx));
-	retsv = SvREFCNT_inc (sv_2mortal (((Pickle::Arrayref&) retlist) .imp));
+	retsv = SvREFCNT_inc (sv_2mortal (((Pickle::Arrayref&) retlist)
+					  .get_imp ()));
       }
     catch (Exception* e)
       {
@@ -496,7 +504,8 @@ namespace Pickle
   }
 
   static void
-  reg (pTHX_ const string& package, const string& name, void* fn, XS (xs))
+  reg (pTHX_ const string& package, const string& name, void* fn,
+       void (*xs) (pTHX_ CV*))
   {
     string fullname (package);
     fullname .append ("::") .append (name);

@@ -302,8 +302,8 @@ from the standard input.
 
 The default Perl configuration will not tolerate more than one
 interpreter at a time in the same process.  Most Pickle functions act
-implicitly on the "current" interpreter, so the Interpreter object is
-generally not used.  You can cause Perl to shut down and free its
+implicitly on the ``current'' interpreter, so the Interpreter object
+is generally not used.  You can cause Perl to shut down and free its
 memory by deallocating it, as in:
 
     delete interp;
@@ -421,9 +421,9 @@ jtobey@john-edwin-tobey.org.  All rights reserved.
    MA 02111-1307  USA
 
 If included in the official Perl distribution by Larry Wall or his
-agent ("Pumpking"), it may be distributed under the same terms as the
-official Perl distribution.  For other licensing arrangements, contact
-the author.
+agent (``Pumpking''), it may be distributed under the same terms as
+the official Perl distribution.  For other licensing arrangements,
+contact the author.
 
 =head1 SEE ALSO
 

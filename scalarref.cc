@@ -25,10 +25,19 @@ namespace Pickle
 {
 
   static inline SV*
+  new_undef_scalarref ()
+  {
+    dTHX;
+    return newRV_noinc (newSVsv (&PL_sv_undef));
+  }
+
+  Scalarref::Scalarref () : Scalar (new_undef_scalarref ()) {}
+
+  static inline SV*
   lookup_scalar (const string& name)
   {
     dTHX;
-    return newRV ((SV*) get_sv (name .c_str (), 1));
+    return newRV ((SV*) get_sv (const_cast<char*> (name .c_str ()), 1));
   }
 
   Scalarref::Scalarref (const string& name) : Scalar (lookup_scalar (name)) {}
@@ -38,7 +47,7 @@ namespace Pickle
   Scalarref::fetch () const
   {
     dInterp;
-    return SvRV (imp);
+    return newSVsv (SvRV (imp));
   }
 
   void

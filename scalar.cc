@@ -27,7 +27,7 @@ namespace Pickle
   inline static SV*
   string_to_sv (pTHX_ const string& s)
   {
-    return newSVpvn (s.data (), s.size ());
+    return newSVpvn (const_cast<char*> (s.data ()), s.size ());
   }
 
   inline static string
@@ -97,8 +97,11 @@ namespace Pickle
     if (! SvROK (sv))
       return false;
 
+#ifndef PERL_5005
     // See pp_rv2sv in pp.c .
     tryAMAGICunDEREF(to_sv);
+#endif
+
     // XXX
     switch (SvTYPE (SvRV (sv)))
       {
@@ -127,7 +130,9 @@ namespace Pickle
     if (! SvROK (sv))
       return false;
 
+#ifndef PERL_5005
     tryAMAGICunDEREF(to_av);  // See pp_rv2av in pp_hot.c .
+#endif
     return SvTYPE (SvRV (sv)) == SVt_PVAV;
   }
 
@@ -147,7 +152,9 @@ namespace Pickle
     if (! SvROK (sv))
       return false;
 
+#ifndef PERL_5005
     tryAMAGICunDEREF(to_hv);  // See pp_rv2hv in pp_hot.c .
+#endif
     // XXX Ignoring pseudohashes.
     return SvTYPE (SvRV (sv)) == SVt_PVHV;
   }
@@ -169,7 +176,9 @@ namespace Pickle
     if (! SvROK (sv))
       return false;
 
+#ifndef PERL_5005
     tryAMAGICunDEREF(to_gv);  // See pp_rv2gv in pp.c .
+#endif
     // XXX Leaving out stuff about SVt_PVIO.
     return SvTYPE (SvRV (sv)) == SVt_PVGV;
   }
@@ -225,11 +234,12 @@ namespace Pickle
   { dTHX; return string_to_sv (aTHX_ s); }
   Scalar::Scalar (const string& s) : imp (make (s)) {}
 
-  static inline SV* make (const char* s) { dTHX; return newSVpv (s, 0); }
+  static inline SV* make (const char* s)
+  { dTHX; return newSVpv (const_cast<char*> (s), 0); }
   Scalar::Scalar (const char* s) : imp (make (s)) {}
 
   static inline SV* make (const char* s, unsigned long len)
-  { dTHX; return newSVpvn (s, (STRLEN) len); }
+  { dTHX; return newSVpvn (const_cast<char*> (s), (STRLEN) len); }
   Scalar::Scalar (const char* s, unsigned long len) : imp (make (s, len)) {}
 
   static inline SV* make (double d) { dTHX; return newSVnv (d); }
@@ -333,7 +343,12 @@ namespace Pickle
   Scalar::as_c_str () const
   {
     dInterp;
+#ifdef PERL_5005
+    STRLEN n_a;
+    return SvPV (imp, n_a);
+# else // !PERL_5005
     return SvPV_nolen (imp);
+#endif
   }
   double
   Scalar::as_double () const
@@ -363,7 +378,7 @@ namespace Pickle
   Scalar::isa (const string& package) const
   {
     dInterp;
-    return sv_derived_from (imp, package.c_str());
+    return sv_derived_from (imp, const_cast<char*> (package.c_str()));
   }
 
   ostream& operator << (ostream& os, const Scalar& t)
@@ -432,6 +447,15 @@ namespace Pickle
     return get_interpreter () ->call_function
       ("Pickle::call_method",
        List () << meth << *this << (const Arrayref&) args, cx);
+  }
+
+  void
+  Scalar::bless (const Scalar& pkgname)
+  {
+    dInterp;
+    STRLEN len;
+    const char* pname = SvPV (pkgname .imp, len);
+    sv_bless (imp, gv_stashpvn (const_cast<char*> (pname), len, 1));
   }
 
 }

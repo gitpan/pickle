@@ -1,8 +1,5 @@
 #include <iostream>
 #include "pickle.hh"
-#ifdef USE_DATE
-#include "date.hh"
-#endif
 
 using namespace Pickle;
 
@@ -34,11 +31,6 @@ main (int argc, char** real_argv)
 
       void test_cb ();
       test_cb ();
-
-#ifdef USE_DATE
-      void test_dates ();
-      test_dates ();
-#endif
 
       Scalar a1[] = { 1, "2.1" };
       Arrayref a (sizeof a1 / sizeof a1 [0], a1);
@@ -118,12 +110,20 @@ test_call ()
   Scalar cwd = call_function ("cwd");
   cerr << "cwd is " << cwd .as_string () << endl;
 
-  eval_string ("use File::Glob ':glob';");
-  List args = List () << "~/*.doc"
-		      << call_function ("GLOB_TILDE");
-  List files = call_function ("glob", args, LIST);
-  for (size_t i = 0; i < files.size(); i++)
-    cout << (string) files[i] << endl;
+  if (Scalarref ("]") .fetch () .as_double () < 5.006)
+    {
+      cerr << "Skipping File::Glob tests for pre-5.6 Perl.  $] == "
+	   << Scalarref ("]") .fetch () .as_double () << endl;
+    }
+  else
+    {
+      eval_string ("use File::Glob ':glob';");
+      List args = List () << "~/*.doc"
+			  << call_function ("GLOB_TILDE");
+      List files = call_function ("glob", args, LIST);
+      for (size_t i = 0; i < files.size(); i++)
+	cerr << (string) files[i] << endl;
+    }
 }
 
 static List my_cb (List& args, Context cx);
@@ -152,7 +152,7 @@ test_cb ()
   cerr << p->eval_string ("Foo->fah (baz => 21, foo => 'bla')");
 
   define_sub ("main", "do_it", doit);
-  cout << eval_string ("do_it(42)") .as_double () << endl;
+  cerr << eval_string ("do_it(42)") .as_double () << endl;
 
   eval_string ("eval { do_it(-100); }; warn \"got error: $@\" if $@");
 }
@@ -178,39 +178,3 @@ static List my_cb (List& args, Context cx)
 		 << int (args[0]) + int (args[1])
 		 << int (args[2]) + int (args[3]);
 }
-
-#ifdef USE_DATE
-void
-test_dates ()
-{
-  Interpreter::get_current () .require_module ("Date::NotTime");
-
-  Date d1 (1969, 2, 19);
-  Date d2 (1970, 8, 20);
-  Date d3;
-
-  cerr << "yesterday: " << (d3 - 1) << endl;
-  cerr << "tomorrow: " << (d3 + 1) << endl;
-  cerr << "age: " << (d3 - d1) << endl;
-  cerr << d1 << " < " << d2 << "?  " << (d1 < d2) << endl;
-  cerr << d2 << " < " << d1 << "?  " << (d2 < d1) << endl;
-  cerr << d1 << " == " << d2 << "?  " << (d1 == d2) << endl;
-  cerr << d2 << " != " << d3 << "?  " << (d2 != d3) << endl;
-  d3 = Date (1970, 8, 20);
-  cerr << d2 << " != " << d3 << "?  " << (d2 != d3) << endl;
-  cerr << d1 .get_year () << "/" << d1 .get_month () << "/"
-       << d1 .get_day () << endl;
-  cerr << "I was " << (d1 .get_day_of_week () == Date::Wednesday ? "" : "not ")
-       << "born on a Wednesday" << endl;
-  enum Date::Week_Day wd = d2 .get_day_of_week ();
-  cerr << "Dave was " << (wd == 4 ? "" : "not ")
-       << "born on a Thursday" << endl;
-}
-#endif
-
-struct Foo : public Scalar
-{
-public:
-  Foo (int x) : Scalar (2 * x) {}
-  double dbl () const { return 2 * as_int (); }
-};

@@ -48,7 +48,7 @@ namespace Pickle
   lookup_array (const string& name)
   {
     dTHX;
-    return newRV ((SV*) get_av (name .c_str (), 1));
+    return newRV ((SV*) get_av (const_cast<char*> (name .c_str ()), 1));
   }
 
   Arrayref::Arrayref (const string& name) : Scalar (lookup_array (name)) {}

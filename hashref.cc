@@ -37,7 +37,7 @@ namespace Pickle
   lookup_hash (const string& name)
   {
     dTHX;
-    return newRV ((SV*) get_hv (name .c_str (), 1));
+    return newRV ((SV*) get_hv (const_cast<char*> (name .c_str ()), 1));
   }
 
   Hashref::Hashref (const string& name) : Scalar (lookup_hash (name)) {}

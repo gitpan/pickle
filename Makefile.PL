@@ -18,23 +18,22 @@
 #
 # See README about alternative licensing.
 
-use 5.006;
+use 5.005;
 use ExtUtils::MakeMaker;
 
-my $mm = MM->new ({
-		   'NAME' => 'pickle',
-		   'VERSION' => '0.5',
-		   'MAN3PODS' => { 'pickle.pod' =>
-				   "\$(INST_MAN3DIR)/pickle.\$(MAN3EXT)" },
+WriteMakefile (
+	       'NAME' => 'pickle',
+	       'VERSION' => '0.5.1',
+	       'MAN3PODS' => { 'pickle.pod' =>
+			       "\$(INST_MAN3DIR)/pickle.\$(MAN3EXT)" },
 
-		   # Don't put \ at end of lines, MakeMaker adds a second \,
-		   # which breaks (GNU) Make.
-		   'OBJECT' => q/interpreter$(OBJ_EXT) scalar$(OBJ_EXT)
-				 scalarref$(OBJ_EXT) arrayref$(OBJ_EXT)
-				 hashref$(OBJ_EXT) coderef$(OBJ_EXT)
-				 globref$(OBJ_EXT)/,
-		  });
-$mm->flush;
+	       # Don't put \ at end of lines, MakeMaker adds a second \,
+	       # which breaks (GNU) Make.
+	       'OBJECT' => q/interpreter$(OBJ_EXT) scalar$(OBJ_EXT)
+			     scalarref$(OBJ_EXT) arrayref$(OBJ_EXT)
+			     hashref$(OBJ_EXT) coderef$(OBJ_EXT)
+			     globref$(OBJ_EXT)/,
+	      );
 
 package MY;
 
@@ -47,7 +46,7 @@ sub constants {
 ###
 ### Your LD is $$self{'LD'}.  This had better know about C++ libraries!
 ### If you get undefined references to a lot of Standard C++ functions,
-### Try rerunning Makefile.PL with `LD=g++'.
+### try rerunning Makefile.PL with `LD=g++'.
 ###
 END
     }
@@ -73,6 +72,9 @@ test_pickle_d$(EXE_EXT): test_pickle$(OBJ_EXT) libperlint.$(SO) libpickle.$(SO)
 
 test_pickle$(EXE_EXT): test_pickle$(OBJ_EXT) $(OBJECT) perlxsi$(OBJ_EXT)
 	$(LD) -o $@ $^ $(EMBED_LDOPTS)
+
+test_pickle$(OBJ_EXT): test_pickle.cc pickle.hh
+	$(CC) -o $@ -c test_pickle.cc -I .
 DONE
 
 sub postamble { <<'DONE' }

@@ -23,11 +23,44 @@ extern "C"
 #include <EXTERN.h>
 #include <perl.h>
 }
+#ifdef USE_THREADS
+#  error "Pickle does not support Perl 5.005 threads"
+#endif
+
 #undef assert
 #undef call_method
 #undef ref
 #undef die
 #undef vform
+
+
+///
+/// Perl 5.005 support
+///
+#ifndef pTHX
+#  define PERL_5005
+#endif
+
+#ifdef PERL_5005
+#  ifdef MULTIPLICITY
+#    error "Pickle + MULTIPLICITY requires Perl >= 5.6"
+#  endif
+#  undef bool
+#  define pTHX
+#  define pTHX_
+#  define aTHX
+#  define aTHX_
+#  define dNOOP extern int Perl___notused
+#  define dTHX dNOOP
+#  define PERL_SET_CONTEXT(x) (PL_curinterp = (x))
+#  define get_sv perl_get_sv
+#  define get_av perl_get_av
+#  define get_hv perl_get_hv
+#  define get_cv perl_get_cv
+#  define eval_pv perl_eval_pv
+#  define call_sv perl_call_sv
+#endif // !defined(pTHX)
+
 
 #define Interpreter_imp PerlInterpreter
 #define interpreter_imp my_perl
