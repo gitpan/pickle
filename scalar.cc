@@ -25,9 +25,9 @@ namespace Pickle
 {
 
   inline static SV*
-  newSVstring (pTHX_ const string& s)
+  string_to_sv (pTHX_ const string& s)
   {
-    return Perl_newSVpvn (s.data (), s.size ());
+    return newSVpvn (s.data (), s.size ());
   }
 
   inline static string
@@ -40,15 +40,9 @@ namespace Pickle
     return string (p, len);
   }
 
-  const Interpreter&
-  Scalar::get_interpreter () const
-  {
-    return Interpreter::get_current ();
-  }
-
   Scalar::~Scalar ()
   {
-    dTHX;
+    dInterp;
     SvREFCNT_dec (imp);
   }
 
@@ -56,7 +50,7 @@ namespace Pickle
   new_scalar ()
   {
     dTHX;
-    return Perl_newSVsv (&PL_sv_undef);
+    return newSVsv (&PL_sv_undef);
   }
 
   Scalar::Scalar () : imp (new_scalar ()) {}
@@ -70,7 +64,7 @@ namespace Pickle
   Scalar&
   Scalar::operator= (const Scalar& o)
   {
-    dTHX;
+    dInterp;
     SV* t;
 
     t = imp;
@@ -79,106 +73,284 @@ namespace Pickle
     return *this;
   }
 
-  static inline SV* make (unsigned long i) { dTHX; return Perl_newSVnv (i); }
+  // Not-yet-implemented value-to-interpreter mapping.
+
+  const Interpreter*
+  Scalar::get_interpreter () const
+  {
+    return Interpreter::get_current ();
+  }
+
+  Interpreter*
+  Scalar::get_interpreter ()
+  {
+    return Interpreter::get_current ();
+  }
+
+  bool
+  Scalar::is_scalarref () const
+  {
+    dInterp;
+    djSP;  // tryAMAGICunDEREF needs `sp'.
+    // tryAMAGICunDEREF needs a var named `sv'.
+    SV* sv = const_cast<SV*> (imp);
+    if (! SvROK (sv))
+      return false;
+
+    // See pp_rv2sv in pp.c .
+    tryAMAGICunDEREF(to_sv);
+    // XXX
+    switch (SvTYPE (SvRV (sv)))
+      {
+      case SVt_PVAV:
+      case SVt_PVHV:
+      case SVt_PVCV:
+      case SVt_PVGV:  // In my book, globs are not scalars.
+	  return false;
+      }
+    return true;
+  }
+
+  void
+  Scalar::check_scalarref () const
+  {
+    if (! is_scalarref ())
+      throw new Exception ("Not a scalar reference");
+  }
+
+  bool
+  Scalar::is_arrayref () const
+  {
+    dInterp;
+    djSP;  // tryAMAGICunDEREF needs `sp'.
+    SV* sv = imp;  // tryAMAGICunDEREF needs a var named `sv'.
+    if (! SvROK (sv))
+      return false;
+
+    tryAMAGICunDEREF(to_av);  // See pp_rv2av in pp_hot.c .
+    return SvTYPE (SvRV (sv)) == SVt_PVAV;
+  }
+
+  void
+  Scalar::check_arrayref () const
+  {
+    if (! is_arrayref ())
+      throw new Exception ("Not an array reference");
+  }
+
+  bool
+  Scalar::is_hashref () const
+  {
+    dInterp;
+    djSP;  // tryAMAGICunDEREF needs `sp'.
+    SV* sv = imp;  // tryAMAGICunDEREF needs a var named `sv'.
+    if (! SvROK (sv))
+      return false;
+
+    tryAMAGICunDEREF(to_hv);  // See pp_rv2hv in pp_hot.c .
+    // XXX Ignoring pseudohashes.
+    return SvTYPE (SvRV (sv)) == SVt_PVHV;
+  }
+
+  void
+  Scalar::check_hashref () const
+  {
+    if (! is_hashref ())
+      throw new Exception ("Not a hash reference");
+  }
+
+  bool
+  Scalar::is_globref () const
+  {
+    dInterp;
+    djSP;  // tryAMAGICunDEREF needs `sp'.
+    // tryAMAGICunDEREF needs a var named `sv'.
+    SV* sv = const_cast<SV*> (imp);
+    if (! SvROK (sv))
+      return false;
+
+    tryAMAGICunDEREF(to_gv);  // See pp_rv2gv in pp.c .
+    // XXX Leaving out stuff about SVt_PVIO.
+    return SvTYPE (SvRV (sv)) == SVt_PVGV;
+  }
+
+  void
+  Scalar::check_globref () const
+  {
+    if (! is_globref ())
+      throw new Exception ("Not a glob reference");
+  }
+
+  bool
+  Scalar::is_coderef () const
+  {
+    //dInterp;
+    return SvROK (imp) && SvTYPE (SvRV (imp)) == SVt_PVCV;
+  }
+
+  void
+  Scalar::check_coderef () const
+  {
+    if (! is_coderef ())
+      throw new Exception ("Not a code reference");
+  }
+
+  // Conversion from native C++ types to scalar.
+
+  static inline SV* make (unsigned long i) { dTHX; return newSVnv (i); }
   Scalar::Scalar (unsigned long i) : imp (make (i)) {}
 
-  static inline SV* make (long i) { dTHX; return Perl_newSViv (i); }
+  static inline SV* make (long i) { dTHX; return newSViv (i); }
   Scalar::Scalar (long i) : imp (make (i)) {}
 
-  static inline SV* make (unsigned int i) { dTHX; return Perl_newSVnv (i); }
+  static inline SV* make (unsigned int i) { dTHX; return newSVnv (i); }
   Scalar::Scalar (unsigned int i) : imp (make (i)) {}
 
-  static inline SV* make (int i) { dTHX; return Perl_newSViv (i); }
+  static inline SV* make (int i) { dTHX; return newSViv (i); }
   Scalar::Scalar (int i) : imp (make (i)) {}
 
-  static inline SV* make (const string& s) { dTHX; return newSVstring (s); }
+  static inline SV* make (unsigned short i) { dTHX; return newSVnv (i); }
+  Scalar::Scalar (unsigned short i) : imp (make (i)) {}
+
+  static inline SV* make (short i) { dTHX; return newSViv (i); }
+  Scalar::Scalar (short i) : imp (make (i)) {}
+
+  static inline SV* make (unsigned char i) { dTHX; return newSVnv (i); }
+  Scalar::Scalar (unsigned char i) : imp (make (i)) {}
+
+  static inline SV* make (signed char i) { dTHX; return newSViv (i); }
+  Scalar::Scalar (signed char i) : imp (make (i)) {}
+
+  static inline SV* make (const string& s)
+  { dTHX; return string_to_sv (aTHX_ s); }
   Scalar::Scalar (const string& s) : imp (make (s)) {}
 
-  static inline SV* make (const char* s) { dTHX; return Perl_newSVpv (s, 0); }
+  static inline SV* make (const char* s) { dTHX; return newSVpv (s, 0); }
   Scalar::Scalar (const char* s) : imp (make (s)) {}
 
-  static inline SV* make (double d) { dTHX; return Perl_newSVnv (d); }
+  static inline SV* make (const char* s, unsigned long len)
+  { dTHX; return newSVpvn (s, (STRLEN) len); }
+  Scalar::Scalar (const char* s, unsigned long len) : imp (make (s, len)) {}
+
+  static inline SV* make (double d) { dTHX; return newSVnv (d); }
   Scalar::Scalar (double d) : imp (make (d)) {}
+
+  static inline SV* make (float d) { dTHX; return newSVnv (d); }
+  Scalar::Scalar (float d) : imp (make (d)) {}
 
   static inline SV* make (bool b) { dTHX; return b ? &PL_sv_yes : &PL_sv_no; }
   Scalar::Scalar (bool b) : imp (make (b)) {}
 
-  Scalar
-  Scalar::lookup (const string& name)
-  {
-    dTHX;
-    return SvREFCNT_inc (Perl_get_sv (name .c_str (), 1));
-  }
-
   bool
   Scalar::defined () const
   {
-    dTHX;
+    dInterp;
     return SvOK (imp);
   }
 
   Scalar
   Scalar::ref () const
   {
-    dTHX;
+    dInterp;
     if (! SvROK (imp))
       return &PL_sv_no;
-    return Perl_sv_reftype (SvRV (imp), 1);
+    return sv_reftype (SvRV (imp), 1);
+  }
+
+  unsigned long
+  Scalar::length () const
+  {
+    dInterp;
+    STRLEN len;
+    SvPV (imp, len);
+    return len;
   }
 
   bool
   Scalar::eq (const Scalar& that) const
   {
-    dTHX;
-    return Perl_sv_eq (imp, that.imp);
+    dInterp;
+    return sv_eq (imp, that.imp);
   }
+
+  // Conversions from scalar to basic C++ types.
 
   unsigned long
   Scalar::as_ulong () const
   {
-    dTHX;
+    dInterp;
     return SvUV (imp);
   }
   long
   Scalar::as_long () const
   {
-    dTHX;
+    dInterp;
     return SvIV (imp);
   }
   unsigned int
   Scalar::as_uint () const
   {
-    dTHX;
+    dInterp;
     return SvUV (imp);
   }
   int
   Scalar::as_int () const
   {
-    dTHX;
+    dInterp;
+    return SvIV (imp);
+  }
+  unsigned short
+  Scalar::as_ushort () const
+  {
+    dInterp;
+    return SvUV (imp);
+  }
+  short
+  Scalar::as_short () const
+  {
+    dInterp;
+    return SvIV (imp);
+  }
+  unsigned char
+  Scalar::as_uchar () const
+  {
+    dInterp;
+    return SvUV (imp);
+  }
+  signed char
+  Scalar::as_schar () const
+  {
+    dInterp;
     return SvIV (imp);
   }
   string
   Scalar::as_string () const
   {
-    dTHX;
-    return sv_to_string (imp);
+    dInterp;
+    return sv_to_string (aTHX_ imp);
   }
   const char*
   Scalar::as_c_str () const
   {
-    dTHX;
+    dInterp;
     return SvPV_nolen (imp);
   }
   double
   Scalar::as_double () const
   {
-    dTHX;
+    dInterp;
+    return SvNV (imp);
+  }
+  float
+  Scalar::as_float () const
+  {
+    dInterp;
     return SvNV (imp);
   }
   bool
   Scalar::as_bool () const
   {
-    dTHX;
+    dInterp;
     return SvTRUE (imp);
   }
 
@@ -190,12 +362,13 @@ namespace Pickle
   bool
   Scalar::isa (const string& package) const
   {
-    return Perl_sv_derived_from (imp, package.c_str());
+    dInterp;
+    return sv_derived_from (imp, package.c_str());
   }
 
   ostream& operator << (ostream& os, const Scalar& t)
   {
-    dTHX;
+    dTHX;  // XXX
     SV* arg = const_cast<SV*> (t.imp);
     bool has_xml;
 
@@ -203,9 +376,9 @@ namespace Pickle
 
     if (!has_xml && !Scalar ("Data::Dumper") .can ("Dumper"))
       {
-	const Interpreter& i = t.get_interpreter ();
+	const Interpreter* i = t.get_interpreter ();
 
-	try { i.require_module ("XML::Dumper"); }
+	try { i ->require_module ("XML::Dumper"); }
 	catch (Exception* e) { delete e; }
 
 	has_xml = Scalar ("XML::Dumper")
@@ -213,21 +386,21 @@ namespace Pickle
 
 	if (!has_xml)
 	  {
-	    i .require_module ("Data::Dumper");
+	    i ->require_module ("Data::Dumper");
 	    if (!Scalar ("Data::Dumper") .call_method ("can", List ()
 						       << "Dumper"))
-	      i.die ("Loaded Data::Dumper but Data::Dumper->Dumper"
-			     " was not defined");
+	      throw new Exception ("Loaded Data::Dumper but"
+				   " Data::Dumper->Dumper was not defined");
 	  }
       }
 
-    return os << (has_xml ? t.as_xml() : t.as_perl());
+    return os << (has_xml ? t .as_xml () : t .as_perl ());
   }
 
   string
   Scalar::as_xml () const
   {
-    get_interpreter() .require_module ("XML::Dumper");
+    get_interpreter() ->require_module ("XML::Dumper");
     return Scalar ("XML::Dumper") .call_method ("new")
       .call_method ("pl2xml", List () << *this);
   }
@@ -235,9 +408,9 @@ namespace Pickle
   string
   Scalar::as_perl () const
   {
-    const Interpreter& i (get_interpreter ());
-    i .require_module ("Data::Dumper");
-    return i .call_function ("Data::Dumper::Dumper", List () << *this);
+    const Interpreter* i (get_interpreter ());
+    i ->require_module ("Data::Dumper");
+    return i ->call_function ("Data::Dumper::Dumper", List () << *this);
   }
 
   /* Call a method with arguments in scalar context.  */
@@ -248,15 +421,15 @@ namespace Pickle
     // Avoid perl_call_method because it cannot trap the no-such-method
     // error.  XXX
     {
-      dTHX;
+      dTHX;  // XXX
       if (! perl_get_cv ("Pickle::call_method", 0))
-	get_interpreter () .eval_string
+	get_interpreter () ->eval_string
 	  ("sub Pickle::call_method {	\
 		my ($meth, $obj, $args) = @_;	\
 		$obj->$meth (@$args);		\
 	    }");
     }
-    return get_interpreter () .call_function
+    return get_interpreter () ->call_function
       ("Pickle::call_method",
        List () << meth << *this << (const Arrayref&) args, cx);
   }

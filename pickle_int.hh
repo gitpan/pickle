@@ -27,11 +27,22 @@ extern "C"
 #undef call_method
 #undef ref
 #undef die
+#undef vform
 
 #define Interpreter_imp PerlInterpreter
 #define interpreter_imp my_perl
 #define Scalar_imp SV
 #include "pickle.hh"
+
+#ifdef PERL_IMPLICIT_CONTEXT
+#  if 0  // This is the ideal way... if get_interpreter really worked.
+#    define dInterp PerlInterpreter* my_perl = get_interpreter () ->my_perl
+#  else  // !0
+#    define dInterp dTHX
+#  endif  // !0
+#else
+#  define dInterp dNOOP
+#endif
 
 
 #ifndef REFCNT_DEBUG

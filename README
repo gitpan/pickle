@@ -1,10 +1,23 @@
-Last modified: 27 Jun 2000
+Last modified: 23 Jul 2000
 
 This is Pickle, a C++ library for conveniently calling Perl functions
-and examining Perl data.  The interface is documented in the file
-pickle.pod.  It is known to work with Perl v5.6.0 on Linux.  It
-probably will require changes to work with non-default Perl
-configurations such as multiplicity or thread support.
+and examining Perl data.  It provides a higher-level interface than
+Perl's native C support, shielding the programmer from complex details
+and sacrificing some power and speed for ease of use and maintenance.
+It is well suited for large applications prototyped in Perl and
+transitioned piece by piece to C++, since it allows one to move the
+boundary between implementation languages quickly and easily.
+
+The name `Pickle' is a simplification of `perlcall', as in `perldoc
+perlcall'.
+
+The library is documented in the file pickle.pod and should be
+browsable via `perldoc pickle' after installation.  Newer versions
+will be at http://search.cpan.org/search?dist=pickle .  Pickle is
+known to work with Perl v5.6.0 on Linux and Solaris (GNU CC) using
+both default and ithreads (-Dusethreads) configurations.
+
+This library will *NOT* work with Perl 5.005x and earlier.
 
 Features include:
 
@@ -12,36 +25,47 @@ Features include:
 
     * two-way exception handling, Perl->C++ and C++->Perl
 
-    * support for making C++ functions callable from Perl
+    * C++ functions callable from Perl and vice versa
 
-    * read/write access to array and hash elements
+    * read/write access to symbol table, array, and hash elements
 
-    * scalar conversion operators for several C++ builtin types.
+    * scalar conversion operators for C++ builtin types
+
+    * application binary compatibility across Perl implementations
+      and configurations
 
 This is ALPHA software.  It is incomplete and very likely to contain
 bugs.
 
-To build this software, you need the Perl build environment and a C++
+To build Pickle, you need the Perl build environment and a C++
 compiler.  If you used an ordinary C compiler to compile Perl, specify
-the C++ compiler as CC and (if necessary) LD, like this:
+the C++ compiler as CC and (if necessary) LD.  For example, if you
+plan to use g++, try this:
 
     perl Makefile.PL CC=g++ LD=g++
 
-"make install" puts pickle.hh into $(PREFIX)/include and the following
+`make install' puts pickle.hh into $(PREFIX)/include and the following
 files and symlinks into $(PREFIX)/lib:
 
     libperlint.so -> libperlint.so.1
     libpickle.so -> libpickle.so.1
 
+$(PREFIX) here means Perl's base installation directory, typically
+/usr/local.  Pickle's Makefile.PL supports only shared library builds,
+but there should be no obstacle to putting the object files into a
+static library if so desired.
+
 libperlint.so contains a copy of the Perl interpreter.  You may have
 to build Perl with special compiler flags to allow it to be made into
-a shared library.  You need -lperlint when linking Pickle with a C++
-program but not when linking XS modules (perldoc perlxs).
+a shared library.  For GCC, this means adding `-Accflags=-fPIC' to the
+Configure command line.  You need -lperlint when linking Pickle with a
+C++ program, but you do not need it for using C++ from within Perl.
+
 libpickle.so is the Pickle library.  -lpickle is always required when
 using Pickle.  You have to make arrangements for the libraries to be
-found at run time.
+found at run time.  See your system's shared library documentation.
 
-Here, for CPAN tourists, is the synopsis from pickle.pod:
+Here is the synopsis from pickle.pod:
 
     #include <pickle.hh>
     using namespace Pickle;
@@ -90,5 +114,6 @@ jtobey@john-edwin-tobey.org  All rights reserved.
    MA 02111-1307  USA
 
 If included in the official Perl distribution by Larry Wall or his
-agent ("Pumpking"), it may be distributed under the same terms as the
-official Perl distribution.
+agent (`Pumpking'), it may be distributed under the same terms as the
+official Perl distribution.  For other licensing arrangements, contact
+the author.

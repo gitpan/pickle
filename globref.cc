@@ -24,28 +24,4 @@
 namespace Pickle
 {
 
-  static inline SV*
-  lookup_scalar (const string& name)
-  {
-    dTHX;
-    return newRV ((SV*) get_sv (name .c_str (), 1));
-  }
-
-  Scalarref::Scalarref (const string& name) : Scalar (lookup_scalar (name)) {}
-  Scalarref::Scalarref (const char* name) : Scalar (lookup_scalar (name)) {}
-
-  Scalar
-  Scalarref::fetch () const
-  {
-    dInterp;
-    return SvRV (imp);
-  }
-
-  void
-  Scalarref::store (const Scalar& v)
-  {
-    dInterp;
-    sv_setsv (SvRV (imp), v.imp);
-  }
-
 }

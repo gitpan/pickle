@@ -14,8 +14,9 @@ main (int argc, char** real_argv)
 
   try
     {
-      const char* argv[] = { "perl", "-we0" };
-      p = new Interpreter (sizeof argv / sizeof argv [0], argv);
+      //const char* argv[] = { "perl", "-we0" };
+      //p = new Interpreter (sizeof argv / sizeof argv [0], argv);
+      p = Interpreter::vivify ();
     }
   catch (Init_Exception* e)
     {
@@ -45,7 +46,9 @@ main (int argc, char** real_argv)
       a = a;
       cerr << "a is a " << a .ref () .as_string () << endl;
 
-      cerr << (string) Scalar::lookup ("\030") << endl;
+      cerr << "$^X: " << p ->Scalarref ("\030") .fetch () .as_string ()
+	   << endl;
+      cerr << "$0: " << (string) Scalarref ("0") .fetch () << endl;
 
       Hashref h;
       h .store ("foo", 5L);
@@ -61,6 +64,9 @@ main (int argc, char** real_argv)
       cerr << s;
       cerr << int (s) << endl;
       cerr << s;
+
+      // Turn on warnings.
+      p ->Scalarref ("\027") .store (1);
 
       // Trigger "use of uninitialized" warning under `-w'.
       cerr << Scalar () .as_int () << endl;

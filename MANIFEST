@@ -6,6 +6,7 @@ Makefile.PL
 README
 arrayref.cc
 coderef.cc
+globref.cc
 hashref.cc
 interpreter.cc
 pickle.hh

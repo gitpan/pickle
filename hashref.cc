@@ -28,7 +28,7 @@ namespace Pickle
   new_hash ()
   {
     dTHX;
-    return Perl_newRV_noinc ((SV*) Perl_newHV ());
+    return newRV_noinc ((SV*) newHV ());
   }
 
   Hashref::Hashref () : Scalar (new_hash ()) {}
@@ -37,7 +37,7 @@ namespace Pickle
   lookup_hash (const string& name)
   {
     dTHX;
-    return Perl_newRV ((SV*) Perl_get_hv (name .c_str (), 1));
+    return newRV ((SV*) get_hv (name .c_str (), 1));
   }
 
   Hashref::Hashref (const string& name) : Scalar (lookup_hash (name)) {}
@@ -46,11 +46,11 @@ namespace Pickle
   Scalar
   Hashref::fetch (const Scalar& key) const
   {
-    dTHX;
+    dInterp;
 
-    HE* loc = Perl_hv_fetch_ent ((HV*) SvRV (imp), key.imp, 0, 0);
+    HE* loc = hv_fetch_ent ((HV*) SvRV (imp), key.imp, 0, 0);
     if (loc)
-      return Perl_newSVsv (HeVAL (loc));
+      return newSVsv (HeVAL (loc));
     else
       return &PL_sv_undef;
   }
@@ -58,9 +58,9 @@ namespace Pickle
   Scalar&
   Hashref::store (const Scalar& key, const Scalar& val)
   {
-    dTHX;
-    return ref (HeVAL (Perl_hv_store_ent ((HV*) SvRV (imp), key.imp,
-					  SvREFCNT_inc (val.imp), 0)));
+    dInterp;
+    return ref (HeVAL (hv_store_ent ((HV*) SvRV (imp), key.imp,
+				     SvREFCNT_inc (val.imp), 0)));
   }
 
 }

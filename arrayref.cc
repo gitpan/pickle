@@ -28,7 +28,7 @@ namespace Pickle
   new_arrayref ()
   {
     dTHX;
-    return Perl_newRV_noinc ((SV*) Perl_newAV ());
+    return newRV_noinc ((SV*) newAV ());
   }
 
   Arrayref::Arrayref () : Scalar (new_arrayref ()) {}
@@ -37,8 +37,8 @@ namespace Pickle
   new_arrayref (size_t len, SV** ary)
   {
     dTHX;
-    return Perl_newRV_noinc
-      ((SV*) Perl_av_make (len, ary));
+    return newRV_noinc
+      ((SV*) av_make (len, ary));
   }
 
   Arrayref::Arrayref (size_t len, const Scalar* const & ss)
@@ -48,7 +48,7 @@ namespace Pickle
   lookup_array (const string& name)
   {
     dTHX;
-    return Perl_newRV ((SV*) Perl_get_av (name .c_str (), 1));
+    return newRV ((SV*) get_av (name .c_str (), 1));
   }
 
   Arrayref::Arrayref (const string& name) : Scalar (lookup_array (name)) {}
@@ -58,7 +58,7 @@ namespace Pickle
   Arrayref::push (const Scalar& t)
   {
     dTHX;
-    Perl_av_push ((AV*) SvRV (imp), SvREFCNT_inc (t.imp));
+    av_push ((AV*) SvRV (imp), SvREFCNT_inc (t.imp));
     return size ();
   }
 
@@ -66,7 +66,7 @@ namespace Pickle
   Arrayref::clear ()
   {
     dTHX;
-    Perl_av_clear ((AV*) SvRV (imp));
+    av_clear ((AV*) SvRV (imp));
     return *this;
   }
 
@@ -74,7 +74,7 @@ namespace Pickle
   Arrayref::size () const
   {
     dTHX;
-    return 1 + Perl_av_len ((AV*) SvRV (imp));
+    return 1 + av_len ((AV*) SvRV (imp));
   }
 
   Scalar
@@ -82,9 +82,9 @@ namespace Pickle
   {
     dTHX;
 
-    SV** loc = Perl_av_fetch ((AV*) SvRV (imp), index, 0);
+    SV** loc = av_fetch ((AV*) SvRV (imp), index, 0);
     if (loc)
-      return Perl_newSVsv (*loc);
+      return newSVsv (*loc);
     else
       return &PL_sv_undef;
   }
@@ -93,20 +93,21 @@ namespace Pickle
   Arrayref::at (size_t index) const
   {
     dTHX;
-    return ref (*Perl_av_fetch ((AV*) SvRV (imp), index, 1));
+    return ref (*av_fetch ((AV*) SvRV (imp), index, 1));
   }
 
   Scalar&
   Arrayref::at (size_t index)
   {
     dTHX;
-    return ref (*Perl_av_fetch ((AV*) SvRV (imp), index, 1));
+    return ref (*av_fetch ((AV*) SvRV (imp), index, 1));
   }
 
   Scalar
   Arrayref::shift ()
   {
-    return Perl_av_shift ((AV*) SvRV (imp));
+    dInterp;
+    return av_shift ((AV*) SvRV (imp));
   }
 
 }
