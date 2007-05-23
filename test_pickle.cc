@@ -1,7 +1,9 @@
 #include <iostream>
+#include "math.h"
 #include "pickle.hh"
 
 using namespace Pickle;
+using namespace std;
 
 static Interpreter* p;
 

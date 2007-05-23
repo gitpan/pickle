@@ -34,7 +34,8 @@
 
 
 #include "pickle_int.hh"
-#include <strstream>
+#include <sstream>
+#include <iostream>
 
 #if REFCNT_DEBUG
 SV* my_sv_refcnt_inc (SV* sv) { return my_inline_sv_refcnt_inc (sv); }
@@ -78,7 +79,7 @@ namespace Pickle
     perl_destruct (p);
     perl_free (p);
     PL_curinterp = 0;
-    ostrstream s;
+    ostringstream s;
     s << whodied << " failed with status " << status;
     throw new Init_Exception (s .str ());
   }
@@ -114,24 +115,24 @@ namespace Pickle
     static const char* argv[] = { "Pickle", "-e0" };
     init (sizeof argv / sizeof argv [0], argv, 0);
   }
-  Interpreter::Interpreter (const vector<const string>& args)
+  Interpreter::Interpreter (const vector<string>& args)
   {
     int argc = args.size ();
     const char* argv[argc];
-    vector<const string>::const_iterator i = args.begin ();
+    vector<string>::const_iterator i = args.begin ();
     
     for (int n = 0; n < argc; n++)
       argv [n] = (i++)->c_str();
     init (argc, argv, 0);
   }
-  Interpreter::Interpreter (const vector<const string>& args,
-			    const vector<const string>& env)
+  Interpreter::Interpreter (const vector<string>& args,
+			    const vector<string>& env)
   {
     int argc = args.size ();
     int envc = env.size ();
     const char* argv[argc + 1];  // XXX portable?
     const char* envp[envc + 1];  // XXX portable?
-    vector<const string>::const_iterator p;
+    vector<string>::const_iterator p;
     int i;
 
     for (p = args .begin (), i = 0; i < argc; i++)
@@ -299,7 +300,7 @@ namespace Pickle
   Pickle::Scalar
   Interpreter::call_function (const Pickle::Scalar& func,
 			      const Pickle::List& args,
-			      Context cx = SCALAR) const
+			      Context cx) const
   {
     AV* av = (AV*) SvRV (((const Pickle::Arrayref&) args) .imp);
     return call_function (const_cast<SV*> (func .imp), 1 + AvFILL (av),
@@ -518,21 +519,21 @@ namespace Pickle
   Interpreter::define_sub (const string& package, const string& name,
 			   sub_one_arg fn) const
   {
-    reg (aTHX_ package, name, fn, xs_entry_one_arg);
+    reg (aTHX_ package, name, (void*) fn, xs_entry_one_arg);
   }
 
   void
   Interpreter::define_sub (const string& package, const string& name,
 			   sub fn) const
   {
-    reg (aTHX_ package, name, fn, xs_entry_list);
+    reg (aTHX_ package, name, (void*) fn, xs_entry_list);
   }
 
   void
   Interpreter::define_sub (const string& package, const string& name,
 			   sub_hashref fn) const
   {
-    reg (aTHX_ package, name, fn, xs_entry_hashref);
+    reg (aTHX_ package, name, (void*) fn, xs_entry_hashref);
   }
 
   // Exception class.

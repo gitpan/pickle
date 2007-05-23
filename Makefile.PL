@@ -23,7 +23,7 @@ use ExtUtils::MakeMaker;
 
 WriteMakefile (
 	       'NAME' => 'pickle',
-	       'VERSION' => '0.5.1',
+	       'VERSION' => '0.5.2',
 	       'MAN3PODS' => { 'pickle.pod' =>
 			       "\$(INST_MAN3DIR)/pickle.\$(MAN3EXT)" },
 

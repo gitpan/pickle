@@ -15,3 +15,4 @@ pickle_int.hh
 scalar.cc
 scalarref.cc
 test_pickle.cc
+META.yml                                 Module meta-data (added by MakeMaker)

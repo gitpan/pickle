@@ -431,7 +431,7 @@ namespace Pickle
   /* Call a method with arguments in scalar context.  */
   Scalar
   Scalar::call_method (const string& meth, const List& args,
-		       Context cx = SCALAR) const
+		       Context cx) const
   {
     // Avoid perl_call_method because it cannot trap the no-such-method
     // error.  XXX

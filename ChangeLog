@@ -1,3 +1,7 @@
+2007-05-23  John Tobey  <jtobey@canuck>
+
+	* Release 0.5.2. Fixes for recent C++ compilers and Perl.
+
 2000-10-30  John Tobey  <jtobey@john-edwin-tobey.org>
 
 	* (0.5 branch): Release 0.5.1.

@@ -73,9 +73,9 @@ namespace Pickle
     Interpreter ();
 
     // Specify perl's command line and environment.
-    Interpreter (const vector<const string>& args);
-    Interpreter (const vector<const string>& args,
-		 const vector<const string>& env);
+    Interpreter (const std::vector<std::string>& args);
+    Interpreter (const std::vector<std::string>& args,
+		 const std::vector<std::string>& env);
     Interpreter (int argc, const char* const * argv,
 		 const char* const * envp = 0);
 
@@ -106,7 +106,7 @@ namespace Pickle
     Pickle::Scalar Scalar (short i) const;
     Pickle::Scalar Scalar (unsigned char i) const;
     Pickle::Scalar Scalar (signed char i) const;
-    Pickle::Scalar Scalar (const string& s) const;
+    Pickle::Scalar Scalar (const std::string& s) const;
     Pickle::Scalar Scalar (const char* s) const;
     Pickle::Scalar Scalar (const char* s, unsigned long len) const;
     Pickle::Scalar Scalar (double d) const;
@@ -119,19 +119,19 @@ namespace Pickle
     Pickle::List List () const;
 
     // Symbol table lookups.
-    Pickle::Scalarref Scalarref (const string& name);
+    Pickle::Scalarref Scalarref (const std::string& name);
     Pickle::Scalarref Scalarref (const char* name);
-    Pickle::Arrayref Arrayref (const string& name);
+    Pickle::Arrayref Arrayref (const std::string& name);
     Pickle::Arrayref Arrayref (const char* name);
-    Pickle::Hashref Hashref (const string& name);
+    Pickle::Hashref Hashref (const std::string& name);
     Pickle::Hashref Hashref (const char* name);
-    Pickle::Coderef Coderef (const string& name);
+    Pickle::Coderef Coderef (const std::string& name);
     Pickle::Coderef Coderef (const char* name);
-    Pickle::Globref Globref (const string& name);
+    Pickle::Globref Globref (const std::string& name);
     Pickle::Globref Globref (const char* name);
 
     // Perform `eval $code'.
-    Pickle::Scalar eval_string (const string& code) const;
+    Pickle::Scalar eval_string (const std::string& code) const;
 
     // Perform `$func->(@$args)'.
     Pickle::Scalar call_function (const Pickle::Scalar& func,
@@ -142,26 +142,27 @@ namespace Pickle
 
     // Perform `require module;' where module is a bare name like
     // "Data::Dumper".
-    void require_module (const string& bare) const;
+    void require_module (const std::string& bare) const;
 
-    void define_sub (const string& package, const string& name,
+    void define_sub (const std::string& package, const std::string& name,
 		     sub_one_arg fn) const;
-    void define_sub (const string& package, const string& name,
+    void define_sub (const std::string& package, const std::string& name,
 		     sub_hashref fn) const;
-    void define_sub (const string& package, const string& name, sub fn) const;
+    void define_sub (const std::string& package, const std::string& name, sub fn) const;
 
     // Perl operator equivalents.
     inline Pickle::Scalar undef () const;
 
   };
 
-  class Init_Exception : public exception
+  class Init_Exception : public std::exception
   {
   private:
-    string msg;
+    std::string msg;
 
   public:
-    Init_Exception (const string& m) : msg (m) {}
+    Init_Exception (const std::string& m) : msg (m) {}
+    ~Init_Exception () throw () {}
     const char* what () { return msg .c_str (); }
   };
 
@@ -185,8 +186,8 @@ namespace Pickle
     friend class Hashref;
     friend class Coderef;
     friend class Globref;
-    friend ostream& operator << (ostream& os, const Scalar& o);
-    friend istream& operator >> (istream& os, Scalar& o);
+    friend std::ostream& operator << (std::ostream& os, const Scalar& o);
+    friend std::istream& operator >> (std::istream& os, Scalar& o);
 
   public:
     Scalar (Scalar_imp* i) : imp (i) {}
@@ -250,8 +251,8 @@ namespace Pickle
     Scalar ref () const;
     unsigned long length () const;
     bool eq (const Scalar&) const;
-    Scalar can (const string& meth) const;
-    bool isa (const string& package) const;
+    Scalar can (const std::string& meth) const;
+    bool isa (const std::string& package) const;
     void die () __attribute__((noreturn));
 
     // Conversions to and from native C++ types.
@@ -288,9 +289,9 @@ namespace Pickle
     signed char as_schar () const;
     operator signed char () const { return as_schar (); }
 
-    Scalar (const string&);
-    string as_string () const;
-    operator string () const { return as_string (); }
+    Scalar (const std::string&);
+    std::string as_string () const;
+    operator std::string () const { return as_string (); }
 
     Scalar (const char* s);
     const char* as_c_str () const;
@@ -309,22 +310,22 @@ namespace Pickle
     operator bool () const { return as_bool (); }
 
     // Convert data to/from XML using XML::Dumper, which must have been loaded.
-    string as_xml () const;
-    static Scalar from_xml (const string& s);
+    std::string as_xml () const;
+    static Scalar from_xml (const std::string& s);
 
     // Convert using Data::Dumper and `eval'.
     // `as_perl' requires Data::Dumper to have been loaded.
-    string as_perl () const;
-    static Scalar from_perl (const string& s);
+    std::string as_perl () const;
+    static Scalar from_perl (const std::string& s);
 
     // Do the equivalent of `$this->$meth (@$args)'.
     // `const' is a lie, because Perl can't indicate which methods
     // are const.  Wrapper functions should declare themselves non-const
     // if the Perl method is "really" not const.
-    Scalar call_method (const string& meth, const List& args,
+    Scalar call_method (const std::string& meth, const List& args,
 			Context cx = SCALAR) const;
     // Do the equivalent of `$this->$meth'.  `const' is a lie.
-    inline Scalar call_method (const string& meth,
+    inline Scalar call_method (const std::string& meth,
 			       Context cx = SCALAR) const;
 
     // THIS must point to a reference.  Bless it into package PKGNAME.
@@ -332,22 +333,23 @@ namespace Pickle
 
   };
   // Use XML::Dumper if available, else Data::Dumper.
-  ostream& operator << (ostream&, const Scalar&);
+  std::ostream& operator << (std::ostream&, const Scalar&);
   // Assume XML::Dumper.
-  istream& operator >> (istream&, Scalar&);
+  std::istream& operator >> (std::istream&, Scalar&);
 
 
-  class Exception : public exception
+  class Exception : public std::exception
   {
   private:
     Scalar msg;
 
   public:
     Exception () {}
+    ~Exception () throw () {}
     Exception (const Scalar& s) : msg (s) {}
 
     // These two initialize the interpreter if it hasn't been.
-    Exception (const string& s);
+    Exception (const std::string& s);
     Exception (const char* s);
 
     Scalar get_scalar () { return msg; }
@@ -366,7 +368,7 @@ namespace Pickle
     // Create a new, uninitialized value.
     Scalarref ();
     // Look up a scalar in the symbol table.
-    Scalarref (const string& name);
+    Scalarref (const std::string& name);
     Scalarref (const char* name);
 
     Scalar fetch () const;
@@ -384,7 +386,7 @@ namespace Pickle
     { if (must_check) check_arrayref (); }
 
     // Look up an array in the symbol table.
-    Arrayref (const string& name);
+    Arrayref (const std::string& name);
     Arrayref (const char* name);
     Arrayref (size_t count, const Scalar* const & elts);
     inline Arrayref (const List&);
@@ -455,7 +457,7 @@ namespace Pickle
     { if (must_check) check_hashref (); }
 
     // Lookup a hash in the symbol table.
-    Hashref (const string& name);
+    Hashref (const std::string& name);
     Hashref (const char* name);
 
     Scalar fetch (const Scalar& key) const;
@@ -502,20 +504,20 @@ namespace Pickle
 
   inline Pickle::Scalar
   Interpreter::call_function (const Pickle::Scalar& func,
-			      Context cx = SCALAR) const
+			      Context cx) const
   {
     return call_function (func, List (), cx);
   }
 
   inline Scalar
-  Scalar::call_method (const string& meth, Context cx = SCALAR) const
+  Scalar::call_method (const std::string& meth, Context cx) const
   {
     return call_method (meth, List (), cx);
   }
 
   // Perform `eval $code'.
   inline Scalar
-  eval_string (const string& code)
+  eval_string (const std::string& code)
   {
     return Interpreter::get_current () ->eval_string (code);
   }
@@ -536,19 +538,19 @@ namespace Pickle
   }
 
   inline void
-  define_sub (const string& package, const string& name, sub_one_arg fn)
+  define_sub (const std::string& package, const std::string& name, sub_one_arg fn)
   {
     Interpreter::get_current () ->define_sub (package, name, fn);
   }
 
   inline void
-  define_sub (const string& package, const string& name, sub_hashref fn)
+  define_sub (const std::string& package, const std::string& name, sub_hashref fn)
   {
     Interpreter::get_current () ->define_sub (package, name, fn);
   }
 
   inline void
-  define_sub (const string& package, const string& name, sub fn)
+  define_sub (const std::string& package, const std::string& name, sub fn)
   {
     Interpreter::get_current () ->define_sub (package, name, fn);
   }
@@ -556,7 +558,7 @@ namespace Pickle
   inline void
   define_sub (const char* package, const char* name, sub fn)
   {
-    define_sub (string (package), string (name), fn);
+    define_sub (std::string (package), std::string (name), fn);
   }
 
 }

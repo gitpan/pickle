@@ -18,6 +18,8 @@
    MA 02111-1307  USA
 */
 
+using namespace std;
+
 extern "C"
 {
 #include <EXTERN.h>
@@ -32,6 +34,8 @@ extern "C"
 #undef ref
 #undef die
 #undef vform
+#undef do_open
+#undef do_close
 
 
 ///
